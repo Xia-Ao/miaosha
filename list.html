@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <title>商品列表</title>
+    <link rel="stylesheet" type="text/css" href="static/assets/global/plugins/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="static/assets/global/css/components.css">
+    <link rel="stylesheet" type="text/css" href="static/assets/admin/pages/css/login.css">
+
+    <script src="./static/assets/global/plugins/jquery-1.11.0.min.js" type="text/javascript"></script>
+</head>
+
+<body>
+<div>
+    <div class="content">
+        <h3 class="form-title">商品列表</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>商品名</th>
+                    <th>商品图片</th>
+                    <th>商品描述</th>
+                    <th>商品销量</th>
+                    <th>商品库存</th>
+                    <th>商品售价</th>
+                </tr>
+                </thead>
+                <tbody id="container">
+
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+    jQuery(document).ready(function () {
+
+        let itemList = [];
+        $(document).ready(function () {
+            $.ajax({
+                type: 'GET',
+                contentType: 'application/x-www-form-urlencoded',
+                url: 'http://localhost:8090/item/list',
+                xhrFields: {withCredentials: true},
+                success: function (data) {
+                    if (data.status === 'success') {
+                        itemList = data.data;
+                        console.log(itemList);
+                        reloadDom();
+                    } else {
+                        alert('商品列表获取失败：' + data.data.errMsg)
+                    }
+                },
+                error: function (data) {
+                    alert('请求出错' + data);
+                }
+            })
+
+        });
+
+        function reloadDom() {
+            // let html = ``;
+            $('#container').html = '';
+            itemList.forEach(item => {
+                let html = `<tr data-id="${item.id}" id="itemDetail${item.id}"><td>${item.title}</td><td><img width="50px" src="${item.imgUrl}" alt=""></td>
+                                        <td>${item.description}</td><td>${item.sales}</td><td>${item.stock}</td><td>${item.price}</td></tr>`;
+
+                $('#container').append($(html));
+
+            });
+            $('#container').on('click', function (e) {
+                let target = e.target || e.srcElement;
+                while (target.tagName != 'TR') {
+                    target = target.parentNode ? target.parentNode : '';
+                }
+                if (target) {
+                    window.location.href = 'getItem.html?id=' + $(target).attr('data-id');
+                }
+            })
+
+        }
+    })
+</script>
+</body>
+
+</html>
