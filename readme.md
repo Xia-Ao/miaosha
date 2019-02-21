@@ -3,7 +3,93 @@
 
 ## 架构
 
+springBoot
+
 ## 目录
+
+项目目录
+```
+├─java
+│  └─com
+│      └─xiaao
+│          └─miaosha
+│              │  MiaoshaApplication.java               // 项目启动main
+│              │
+│              ├─controller                             // ctrl
+│              │  │  BaseController.java                // 基础异常捕获，其他ctrl继承
+│              │  │  ItemController.java                // 商品接口
+│              │  │  OrderController.java               // 订单接口
+│              │  │  UserController.java                // 用户接口
+│              │  │
+│              │  └─viewObject                          // 返回前端数据模型
+│              │          ItemVo.java                   // 商品Vo
+│              │          UserVo.java                   // 用户Vo
+│              │
+│              ├─dao                                    // dao层
+│              │      ItemDoMapper.java                 // 商品DoMapper
+│              │      ItemStockDoMapper.java            // 商品库存DoMapper
+│              │      OrderDoMapper.java                // 订单DoMapper
+│              │      PromoDoMapper.java                // 秒杀活动DoMapper
+│              │      SequenceDoMapper.java             // 订单序列号DoMapper
+│              │      UserDoMapper.java                 // 用户DoMapper
+│              │      UserPasswordDoMapper.java         // 用户密码表DoMapper
+│              │
+│              ├─dataobject                             dataObject-Do数据，操作数据以及数据库返回
+│              │      ItemDo.java                       // 
+│              │      ItemStockDo.java                  // 
+│              │      OrderDo.java                      // 
+│              │      PromoDo.java                      // 
+│              │      SequenceDo.java                   // 
+│              │      UserDo.java                       // 
+│              │      UserPasswordDo.java               // 
+│              │
+│              ├─error                                  // error处理
+│              │      BusinessException.java            // 自定义事务异常处理
+│              │      CommonError.java                  // 通用错误接口
+│              │      EmBusinessErr.java                // 错误类型枚举
+│              │
+│              ├─response
+│              │      CommonReturnType.java             // 通用返回类型
+│              │
+│              ├─service
+│              │  │  ItemService.java                   // 商品服务接口
+│              │  │  OrderService.java                  // 订单服务接口
+│              │  │  PromoService.java                  // 活动服务接口
+│              │  │  UserService.java                   // 用户服务接口
+│              │  │
+│              │  ├─impl                                // 实现
+│              │  │      ItemServiceImpl.java           // 商品Impl
+│              │  │      OrderServiceImpl.java          // 订单Impl
+│              │  │      PromoServiceImpl.java          // 活动Impl
+│              │  │      UserServiceImpl.java           // 用户Impl
+│              │  │
+│              │  └─model                               // 数据模型
+│              │          ItemModel.java                // 商品数据模型Model
+│              │          OrderModel.java               // 订单数据模型Model
+│              │          PromoModel.java               // 活动数据模型Model
+│              │          UserModel.java                // 用户数据模型Model
+│              │
+│              └─validate
+│                      ValidationResult.java            // 校验器结果
+│                      ValidatorImpl.java               // 校验方法实现Impl
+│
+└─resources
+    │  application.properties                           // 项目配置
+    │  mybatis-generator.xml                            // mybatis-generator
+    │
+    ├─mapping                                           // mapping
+    │      ItemDoMapper.xml                             // item库SQL
+    │      ItemStockDoMapper.xml                        // item_stock库SQL
+    │      OrderDoMapper.xml                            // order库SQL
+    │      PromoDoMapper.xml                            // promo库SQL
+    │      SequenceDoMapper.xml                         // sequence库SQL
+    │      UserDoMapper.xml                             // user库SQL
+    │      UserPasswordDoMapper.xml                     // user_password库SQL
+    │
+    ├─static
+    └─templates
+```
+
 
 github仓库: git@github.com:Xia-Ao/miaosha.git
 
@@ -51,4 +137,61 @@ github仓库: git@github.com:Xia-Ao/miaosha.git
 
 比源生util.Date更好用的时间工具
 
+
+### validator验证器
+在后台逻辑中，经常会对字段进行校验，在前端基本上都是用正则或者if-else校验，在后端如果使用if-else校验会显得比较low也比较麻烦，好在java提供非常多的校验工具，这里用到validator。
+
+1. 创建一个ValidationResult类，封装两个字段hasErrors和错误map集合
+2. 创建ValidatorImpl实现，引入校验类，实现校验方法
+3. 在数据模型中创建校验规则
+4. 在需要校验的地方，代用校验方法，判断校验结果字段，如果通过则继续，如果不通过则抛出校验。
+
+```java
+/**
+ * @className: ValidatorImpl
+ * @description: NULL
+ * @author: Xia-ao
+ * @create: 2019-02-08 22:37
+ **/
+// 实现初始化的bean接口
+@Component
+public class ValidatorImpl implements InitializingBean {
+
+    private Validator validator;
+
+    // 在bean 初始化之后嗲用这个方法
+    @Override
+    public void afterPropertiesSet() throws Exception {
+
+        //将hibernate validator通过工厂的初始化方法使其实例化
+        this.validator = Validation.buildDefaultValidatorFactory().getValidator();
+    }
+
+    // 实现校验方法并返回校验结果
+
+    public ValidationResult validate(Object bean) {
+        // 创建自定义的验证结果对象，用来存储是否错误和错误信息
+        ValidationResult result = new ValidationResult();
+
+        // 调用验证器的验证方法，返回一个Set
+        Set<ConstraintViolation<Object>> constraintViolationSet = validator.validate(bean);
+        if (constraintViolationSet.size() > 0) {
+            // bean中有错误
+            result.setHasErrors(true);
+            // 遍历set，将错误存入到result
+            constraintViolationSet.forEach(constraintViolation -> {
+                // 获取bean属性上注解定义的错误信息
+                String errMsg = constraintViolation.getMessage();
+                // 获取哪个信息有错误
+                String protertyName = constraintViolation.getPropertyPath().toString();
+                // 将错误信息和对应的属性放入到错误map中
+                result.getErrorMsgMap().put(errMsg, protertyName);
+            });
+        }
+        // 将这个map返回给用户
+        return result;
+
+    }
+}
+```
 
